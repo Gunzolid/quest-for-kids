@@ -31,4 +31,11 @@ abstract class AuthRepository {
 
   /// Get all children for a specific parent.
   Future<List<UserEntity>> getChildrenOfParent(String parentUid);
+
+  /// Update a child profile.
+  Future<void> updateChildProfile(String parentId, String childId,
+      {String? name, String? passcode});
+
+  /// Delete a child profile.
+  Future<void> deleteChildProfile(String parentId, String childId);
 }

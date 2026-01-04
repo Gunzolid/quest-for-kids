@@ -27,6 +27,11 @@ class ParentDashboardScreen extends ConsumerWidget {
             title: const Text('Parent Dashboard'),
             actions: [
               IconButton(
+                icon: const Icon(Icons.card_giftcard),
+                tooltip: 'Manage Rewards',
+                onPressed: () => context.push('/manage-rewards/${user.id}'),
+              ),
+              IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () {
                   ref.read(authControllerProvider.notifier).signOut();
@@ -35,7 +40,7 @@ class ParentDashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: _buildChildList(context, user.id),
+          body: _buildChildList(context, ref, user.id),
           floatingActionButton: FloatingActionButton(
             onPressed: () => _showAddChildDialog(context, ref, user.id),
             child: const Icon(Icons.person_add),
@@ -51,7 +56,7 @@ class ParentDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChildList(BuildContext context, String parentId) {
+  Widget _buildChildList(BuildContext context, WidgetRef ref, String parentId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -104,6 +109,15 @@ class ParentDashboardScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
+                onTap: () {
+                  context.push(
+                    '/manage-tasks/$childId',
+                    extra: {
+                      'parentId': parentId,
+                      'childName': name,
+                    },
+                  );
+                },
                 leading: CircleAvatar(
                   backgroundColor: Colors.blue.shade100,
                   child: Text(
@@ -142,7 +156,45 @@ class ParentDashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditChildDialog(
+                        context,
+                        ref,
+                        parentId,
+                        childId,
+                        name,
+                        // Pass current passcode if available or handle logic
+                        // For MVP we might not show current passcode for security?
+                        // But let's assume we want to overwrite it.
+                        // Or we can pass null to keep existing.
+                      );
+                    } else if (value == 'delete') {
+                      _confirmDeleteChild(
+                          context, ref, parentId, childId, name);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(children: [
+                        Icon(Icons.edit, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Edit Profile'),
+                      ]),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete Profile'),
+                      ]),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -153,6 +205,9 @@ class ParentDashboardScreen extends ConsumerWidget {
 
   void _showAddChildDialog(
       BuildContext context, WidgetRef ref, String parentId) {
+    // Reusing logic for clean code?
+    // Let's keep separate for now as "Add" requires fields, "Edit" might be optional field updates.
+    // For simplicity, let's copy/paste structure but adapt for Add.
     final nameController = TextEditingController();
     final passcodeController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -201,10 +256,7 @@ class ParentDashboardScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                // Close dialog first
                 Navigator.pop(dialogContext);
-
-                // Then call provider
                 await ref.read(authControllerProvider.notifier).addChildProfile(
                       nameController.text.trim(),
                       passcodeController.text.trim(),
@@ -213,6 +265,115 @@ class ParentDashboardScreen extends ConsumerWidget {
               }
             },
             child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditChildDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+    String childId,
+    String currentName,
+  ) {
+    final nameController = TextEditingController(text: currentName);
+    final passcodeController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Child Profile'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Child Name'),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: passcodeController,
+                decoration: const InputDecoration(
+                  labelText: 'New Passcode (Optional)',
+                  helperText: 'Leave empty to keep existing',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return null; // Optional
+                  if (v.length != 6) {
+                    return 'Must be exactly 6 digits';
+                  }
+                  if (int.tryParse(v) == null) {
+                    return 'Numbers only';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext);
+                final newName = nameController.text.trim();
+                final newPass = passcodeController.text.trim();
+
+                await ref
+                    .read(authControllerProvider.notifier)
+                    .updateChildProfile(
+                      parentId,
+                      childId,
+                      name: newName,
+                      passcode: newPass.isEmpty ? null : newPass,
+                    );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteChild(
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+    String childId,
+    String childName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Child Profile?'),
+        content: Text(
+            'Are you sure you want to delete "$childName"?\nThis cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref
+                  .read(authControllerProvider.notifier)
+                  .deleteChildProfile(parentId, childId);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

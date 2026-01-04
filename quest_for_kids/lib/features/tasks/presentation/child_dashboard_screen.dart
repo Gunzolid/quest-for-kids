@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
+import '../../rewards/domain/entities/reward_entity.dart';
+import '../../rewards/presentation/providers/reward_providers.dart';
+import '../domain/entities/task_entity.dart';
+import 'providers/task_providers.dart';
 
 class ChildDashboardScreen extends ConsumerStatefulWidget {
   const ChildDashboardScreen({super.key});
@@ -54,7 +58,7 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
     return Scaffold(
       body: _selectedIndex == 0
           ? _buildMissionsTab(user.name, user.currentPoints ?? 0)
-          : _buildRewardsTab(user.currentPoints ?? 0),
+          : _buildRewardsTab(user.currentPoints ?? 0, user.parentId!, user.id),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
@@ -148,27 +152,62 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Mission List (Mock)
+// ... (inside _buildMissionsTab)
+
+          // Mission List (Real)
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _buildMissionCard(
-                    'Homework', 'Math exercises pg 10-12', 50, Colors.blue),
-                _buildMissionCard('Clean Room', 'Organize toys and make bed',
-                    30, Colors.purple),
-                _buildMissionCard(
-                    'Read a Book', 'Read for 15 minutes', 20, Colors.green),
-              ],
-            ),
+            child: Consumer(builder: (context, ref, child) {
+              // We need parentId and childId.
+              // We know 'user' (from param or provider) has this info.
+              // But 'user' passed to this method is just name and points.
+              // We need the full user object or IDs.
+              // Let's rely on the parent 'user' object from build method being available if we change signature
+              // or just re-access provider?
+              // Better: pass UserEntity to _buildMissionsTab.
+              final authState = ref.watch(authControllerProvider);
+              final user = authState.value!;
+
+              if (user.parentId == null)
+                return const Center(child: Text('Error: No Parent ID'));
+
+              final tasksAsync = ref.watch(tasksStreamProvider(
+                  (parentId: user.parentId!, childId: user.id)));
+
+              return tasksAsync.when(
+                data: (tasks) {
+                  if (tasks.isEmpty) {
+                    return Center(
+                        child: Text('No missions for today!',
+                            style: GoogleFonts.kanit(
+                                fontSize: 18, color: Colors.grey)));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: tasks.length,
+                    itemBuilder: (context, index) {
+                      final task = tasks[index];
+                      // Assign color based on index or hash for variety
+                      final color = [
+                        Colors.blue,
+                        Colors.purple,
+                        Colors.green,
+                        Colors.orange
+                      ][index % 4];
+                      return _buildMissionCard(task, color);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error: $e')),
+              );
+            }),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMissionCard(
-      String title, String subtitle, int points, Color color) {
+  Widget _buildMissionCard(TaskEntity task, Color color) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -190,11 +229,30 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
+                  Text(task.title,
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
+                  Text(task.description,
+                      style: TextStyle(color: Colors.grey.shade600)),
+                  if (task.startTime != null) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _formatTaskTime(task),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -209,7 +267,7 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                     border: Border.all(color: Colors.orange.shade200),
                   ),
                   child: Text(
-                    '+$points KP',
+                    '+${task.points} KP',
                     style: TextStyle(
                         color: Colors.orange.shade800,
                         fontWeight: FontWeight.bold),
@@ -217,14 +275,39 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
-                  onPressed: () {}, // TODO: Implement request approval
+                  onPressed: task.status == TaskStatus.pending
+                      ? () async {
+                          final authState =
+                              ref.read(authControllerProvider).value;
+                          if (authState != null && authState.parentId != null) {
+                            await ref
+                                .read(taskControllerProvider.notifier)
+                                .markTaskAsCompleted(
+                                  parentId: authState.parentId!,
+                                  childId: authState.id,
+                                  taskId: task.id,
+                                );
+                          }
+                        }
+                      : null,
                   style: ElevatedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    backgroundColor: color,
+                    backgroundColor: task.status == TaskStatus.pending
+                        ? color
+                        : (task.status == TaskStatus.approved
+                            ? Colors.green
+                            : Colors.grey),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Done', style: TextStyle(fontSize: 12)),
+                  child: Text(
+                    task.status == TaskStatus.approved
+                        ? 'Completed'
+                        : (task.status == TaskStatus.completed
+                            ? 'Waiting Approval'
+                            : 'Done'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 )
               ],
             )
@@ -234,34 +317,186 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
     );
   }
 
-  Widget _buildRewardsTab(int points) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.card_giftcard, size: 80, color: Colors.pink),
-          const SizedBox(height: 16),
-          Text(
-            'Rewards Store',
-            style: GoogleFonts.kanit(fontSize: 24, fontWeight: FontWeight.bold),
+  String _formatTaskTime(TaskEntity task) {
+    if (task.startTime == null) return '';
+    final start =
+        '${task.startTime!.hour.toString().padLeft(2, '0')}:${task.startTime!.minute.toString().padLeft(2, '0')}';
+    if (task.endTime != null) {
+      final end =
+          '${task.endTime!.hour.toString().padLeft(2, '0')}:${task.endTime!.minute.toString().padLeft(2, '0')}';
+      return 'Time: $start - $end';
+    }
+    return 'Start: $start';
+  }
+
+  Widget _buildRewardsTab(int currentPoints, String parentId, String childId) {
+    final rewardsAsync = ref.watch(rewardsStreamProvider(parentId));
+
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.pink.shade100,
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(32)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming Soon!',
-            style: TextStyle(color: Colors.grey.shade600),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Rewards',
+                style: GoogleFonts.kanit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.pink.shade800),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.pink.withOpacity(0.2), blurRadius: 8)
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.stars, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$currentPoints KP',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ],
+                ),
+              )
+            ],
           ),
-          const SizedBox(height: 32),
-          Text('Your Points: $points KP',
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(authControllerProvider.notifier).signOut();
-              context.go('/login');
+        ),
+        const SizedBox(height: 16),
+
+        // Rewards Grid
+        Expanded(
+          child: rewardsAsync.when(
+            data: (rewards) {
+              if (rewards.isEmpty) {
+                return Center(
+                    child: Text('No rewards available yet!',
+                        style: GoogleFonts.kanit(
+                            fontSize: 18, color: Colors.grey)));
+              }
+              return GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.8,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: rewards.length,
+                itemBuilder: (context, index) {
+                  final reward = rewards[index];
+                  final canAfford = currentPoints >= reward.cost;
+                  return Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    child: InkWell(
+                      onTap: () {
+                        if (canAfford) {
+                          _confirmRedeem(context, ref, reward, childId,
+                              parentId, currentPoints);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Not enough points yet!')),
+                          );
+                        }
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.card_giftcard,
+                              size: 48,
+                              color: canAfford
+                                  ? Colors.pink
+                                  : Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text(
+                            reward.name,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: canAfford
+                                  ? Colors.pink.shade50
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${reward.cost} KP',
+                              style: TextStyle(
+                                  color: canAfford
+                                      ? Colors.pink.shade800
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
             },
-            child: const Text('Logout (Test)'),
-          )
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('Error: $e')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _confirmRedeem(BuildContext context, WidgetRef ref, RewardEntity reward,
+      String childId, String parentId, int currentPoints) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Redeem Reward?'),
+        content: Text(
+            'Spend ${reward.cost} KP for "${reward.name}"?\nYou will have ${currentPoints - reward.cost} KP left.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(rewardControllerProvider.notifier).redeemReward(
+                    parentId: parentId,
+                    childId: childId,
+                    rewardId: reward.id,
+                    cost: reward.cost,
+                  );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Redeemed "${reward.name}"! Enjoy!')),
+                );
+              }
+            },
+            child: const Text('Redeem'),
+          ),
         ],
       ),
     );

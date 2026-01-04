@@ -177,6 +177,41 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> updateChildProfile(String parentId, String childId,
+      {String? name, String? passcode}) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (name != null) updates['name'] = name;
+      if (passcode != null) updates['passcode'] = passcode;
+
+      if (updates.isEmpty) return;
+
+      await _firestore
+          .collection('users')
+          .doc(parentId)
+          .collection('children')
+          .doc(childId)
+          .update(updates);
+    } catch (e) {
+      throw AuthFailure('Failed to update child profile: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteChildProfile(String parentId, String childId) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(parentId)
+          .collection('children')
+          .doc(childId)
+          .delete();
+    } catch (e) {
+      throw AuthFailure('Failed to delete child profile: $e');
+    }
+  }
+
+  @override
   Stream<UserEntity?> getCurrentUser() {
     return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
       if (firebaseUser == null) return null;

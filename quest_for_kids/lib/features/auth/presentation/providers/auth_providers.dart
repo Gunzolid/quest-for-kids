@@ -69,6 +69,29 @@ class AuthController extends AsyncNotifier<UserEntity?> {
     });
   }
 
+  Future<void> updateChildProfile(String parentId, String childId,
+      {String? name, String? passcode}) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authRepositoryProvider).updateChildProfile(
+          parentId, childId,
+          name: name, passcode: passcode);
+      // Refresh current user or children list?
+      // Since children list is a Stream in UI, it should auto-update.
+      return null;
+    });
+  }
+
+  Future<void> deleteChildProfile(String parentId, String childId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(authRepositoryProvider)
+          .deleteChildProfile(parentId, childId);
+      return null;
+    });
+  }
+
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
