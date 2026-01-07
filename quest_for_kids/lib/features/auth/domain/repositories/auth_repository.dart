@@ -38,4 +38,11 @@ abstract class AuthRepository {
 
   /// Delete a child profile.
   Future<void> deleteChildProfile(String parentId, String childId);
+
+  /// Update child points manually.
+  Future<void> updateChildPoints(
+      String parentId, String childId, int newPoints);
+
+  /// Stream a child's profile for real-time updates
+  Stream<UserEntity> streamChildProfile(String parentId, String childId);
 }

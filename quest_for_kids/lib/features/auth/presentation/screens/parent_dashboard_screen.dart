@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/auth_providers.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
 
 class ParentDashboardScreen extends ConsumerWidget {
   const ParentDashboardScreen({super.key});
@@ -26,6 +27,53 @@ class ParentDashboardScreen extends ConsumerWidget {
           appBar: AppBar(
             title: const Text('Parent Dashboard'),
             actions: [
+              // Notification Bell
+              Consumer(
+                builder: (context, ref, child) {
+                  final notificationsAsync = ref.watch(
+                    notificationStreamProvider(user.id),
+                  );
+                  final unreadCount =
+                      notificationsAsync.value
+                          ?.where((n) => !n.isRead)
+                          .length ??
+                      0;
+
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () =>
+                            _showNotificationsDialog(context, ref, user.id),
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 14,
+                              minHeight: 14,
+                            ),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.card_giftcard),
                 tooltip: 'Manage Rewards',
@@ -47,12 +95,9 @@ class ParentDashboardScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, st) => Scaffold(
-        body: Center(child: Text('Error: $e')),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
     );
   }
 
@@ -100,100 +145,158 @@ class ParentDashboardScreen extends ConsumerWidget {
             final data = docs[index].data() as Map<String, dynamic>;
             final childId = docs[index].id;
             final name = data['name'] as String? ?? 'Unknown';
-            final points = data['current_points'] as int? ?? 0;
+            final points = data['currentPoints'] as int? ?? 0;
 
             return Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 4,
+              margin: const EdgeInsets.only(bottom: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: ListTile(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
                 onTap: () {
                   context.push(
                     '/manage-tasks/$childId',
-                    extra: {
-                      'parentId': parentId,
-                      'childName': name,
-                    },
+                    extra: {'parentId': parentId, 'childName': name},
                   );
                 },
-                leading: CircleAvatar(
-                  backgroundColor: Colors.blue.shade100,
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: TextStyle(
-                        color: Colors.blue.shade800,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-                title: Text(name,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('KP Points: $points'),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          'ID: $childId',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: GoogleFonts.kanit(
+                            fontSize: 24,
+                            color: Colors.blue.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.copy, size: 14),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: childId));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('ID copied to clipboard')),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.kanit(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange.shade200,
+                                ),
+                              ),
+                              child: Text(
+                                '$points KP',
+                                style: GoogleFonts.kanit(
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: childId));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('ID copied to clipboard'),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'ID: $childId',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit_points') {
+                            _showEditPointsDialog(
+                              context,
+                              ref,
+                              parentId,
+                              childId,
+                              name,
+                              points,
                             );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _showEditChildDialog(
-                        context,
-                        ref,
-                        parentId,
-                        childId,
-                        name,
-                        // Pass current passcode if available or handle logic
-                        // For MVP we might not show current passcode for security?
-                        // But let's assume we want to overwrite it.
-                        // Or we can pass null to keep existing.
-                      );
-                    } else if (value == 'delete') {
-                      _confirmDeleteChild(
-                          context, ref, parentId, childId, name);
-                    }
-                  },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Row(children: [
-                        Icon(Icons.edit, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('Edit Profile'),
-                      ]),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Delete Profile'),
-                      ]),
-                    ),
-                  ],
+                          } else if (value == 'edit_profile') {
+                            _showEditChildDialog(
+                              context,
+                              ref,
+                              parentId,
+                              childId,
+                              name,
+                            );
+                          } else if (value == 'delete') {
+                            _confirmDeleteChild(
+                              context,
+                              ref,
+                              parentId,
+                              childId,
+                              name,
+                            );
+                          }
+                        },
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(
+                                value: 'edit_points',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.stars, color: Colors.orange),
+                                    SizedBox(width: 8),
+                                    Text('Edit Points'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem<String>(
+                                value: 'edit_profile',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, color: Colors.blue),
+                                    SizedBox(width: 8),
+                                    Text('Edit Profile'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem<String>(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, color: Colors.red),
+                                    SizedBox(width: 8),
+                                    Text('Delete Profile'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -203,8 +306,148 @@ class ParentDashboardScreen extends ConsumerWidget {
     );
   }
 
+  void _showNotificationsDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Notifications'),
+              TextButton(
+                onPressed: () {
+                  ref
+                      .read(notificationRepositoryProvider)
+                      .markAllAsRead(parentId);
+                },
+                child: const Text('Mark all read'),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final notificationsAsync = ref.watch(
+                  notificationStreamProvider(parentId),
+                );
+
+                return notificationsAsync.when(
+                  data: (notifications) {
+                    if (notifications.isEmpty) {
+                      return const Center(child: Text('No notifications'));
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: notifications.length,
+                      itemBuilder: (context, index) {
+                        final notif = notifications[index];
+                        return ListTile(
+                          leading: Icon(
+                            notif.type.name == 'taskCompleted'
+                                ? Icons.check_circle_outline
+                                : Icons.card_giftcard,
+                            color: notif.type.name == 'taskCompleted'
+                                ? Colors.green
+                                : Colors.purple,
+                          ),
+                          title: Text(
+                            notif.title,
+                            style: TextStyle(
+                              fontWeight: notif.isRead
+                                  ? FontWeight.normal
+                                  : FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(notif.message),
+                          trailing: Text(
+                            "${notif.timestamp.hour}:${notif.timestamp.minute.toString().padLeft(2, '0')}",
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onTap: () {
+                            if (!notif.isRead) {
+                              ref
+                                  .read(notificationRepositoryProvider)
+                                  .markAsRead(parentId, notif.id);
+                            }
+                          },
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Text('Error: $e'),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditPointsDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+    String childId,
+    String name,
+    int currentPoints,
+  ) {
+    final pointsController = TextEditingController(
+      text: currentPoints.toString(),
+    );
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Points for $name'),
+        content: TextField(
+          controller: pointsController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Points',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newPoints = int.tryParse(pointsController.text);
+              if (newPoints != null) {
+                Navigator.pop(context);
+                await ref
+                    .read(authControllerProvider.notifier)
+                    .updateChildPoints(parentId, childId, newPoints);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddChildDialog(
-      BuildContext context, WidgetRef ref, String parentId) {
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+  ) {
     // Reusing logic for clean code?
     // Let's keep separate for now as "Add" requires fields, "Edit" might be optional field updates.
     // For simplicity, let's copy/paste structure but adapt for Add.
@@ -257,7 +500,9 @@ class ParentDashboardScreen extends ConsumerWidget {
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 Navigator.pop(dialogContext);
-                await ref.read(authControllerProvider.notifier).addChildProfile(
+                await ref
+                    .read(authControllerProvider.notifier)
+                    .addChildProfile(
                       nameController.text.trim(),
                       passcodeController.text.trim(),
                       parentId,
@@ -360,7 +605,8 @@ class ParentDashboardScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete Child Profile?'),
         content: Text(
-            'Are you sure you want to delete "$childName"?\nThis cannot be undone.'),
+          'Are you sure you want to delete "$childName"?\nThis cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

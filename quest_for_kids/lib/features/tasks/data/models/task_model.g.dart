@@ -7,20 +7,20 @@ part of 'task_model.dart';
 // **************************************************************************
 
 _TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => _TaskModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      points: (json['points'] as num).toInt(),
-      isRecurring: json['is_recurring'] as bool,
-      status: $enumDecode(_$TaskStatusEnumMap, json['status']),
-      assignedToId: json['assigned_to_id'] as String,
-      startTime: json['start_time'] == null
-          ? null
-          : DateTime.parse(json['start_time'] as String),
-      endTime: json['end_time'] == null
-          ? null
-          : DateTime.parse(json['end_time'] as String),
-    );
+  id: json['id'] as String,
+  title: json['title'] as String,
+  description: json['description'] as String,
+  points: (json['points'] as num).toInt(),
+  isRecurring: json['is_recurring'] as bool,
+  status: $enumDecode(_$TaskStatusEnumMap, json['status']),
+  assignedToId: json['assigned_to_id'] as String,
+  startTime: json['start_time'] == null
+      ? null
+      : DateTime.parse(json['start_time'] as String),
+  endTime: json['end_time'] == null
+      ? null
+      : DateTime.parse(json['end_time'] as String),
+);
 
 Map<String, dynamic> _$TaskModelToJson(_TaskModel instance) =>
     <String, dynamic>{

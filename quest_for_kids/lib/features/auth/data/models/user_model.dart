@@ -30,7 +30,7 @@ abstract class UserModel with _$UserModel implements UserEntity {
     String? avatarUrl,
     required UserRole role,
     String? email,
-    @JsonKey(name: 'current_points') int? currentPoints,
+    @JsonKey(name: 'currentPoints') int? currentPoints,
     String? passcode,
     @JsonKey(name: 'parent_id') String? parentId,
   }) = _UserModel;

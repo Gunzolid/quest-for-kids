@@ -23,6 +23,14 @@ final authStateChangesProvider = StreamProvider<UserEntity?>((ref) {
   return authRepository.getCurrentUser();
 });
 
+// --- Child Stream Provider ---
+final childStreamProvider =
+    StreamProvider.family<UserEntity, ({String parentId, String childId})>(
+        (ref, args) {
+  final authRepository = ref.watch(authRepositoryProvider);
+  return authRepository.streamChildProfile(args.parentId, args.childId);
+});
+
 // --- Auth Controller ---
 class AuthController extends AsyncNotifier<UserEntity?> {
   @override
@@ -88,6 +96,17 @@ class AuthController extends AsyncNotifier<UserEntity?> {
       await ref
           .read(authRepositoryProvider)
           .deleteChildProfile(parentId, childId);
+      return null;
+    });
+  }
+
+  Future<void> updateChildPoints(
+      String parentId, String childId, int newPoints) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(authRepositoryProvider)
+          .updateChildPoints(parentId, childId, newPoints);
       return null;
     });
   }

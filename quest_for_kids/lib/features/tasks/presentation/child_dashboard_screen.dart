@@ -21,25 +21,11 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // We assume current user is logged in as child here, managed by our simplified auth state
-    // But since Child login doesn't persist via Firebase Auth (it's local state in repo),
-    // we need to be careful. Ideally we'd store child session.
-    // However, for this demo, let's just grab the user from the provider if available,
-    // or we might need to rely on passed data.
-    // The current `authStateChangesProvider` might return null if we relying strictly on FA User.
-    // Let's check: in AuthRepositoryImpl.getCurrentUser, we return null if not parent.
-    // So `ref.watch(authStateChangesProvider)` might be null!
-    // FIX: We should probably store the logged-in child in a separate provider or
-    // making `authControllerProvider` hold the state is better.
-    // BUT, the `LoginScreen` navigates based on `authControllerProvider` STATE.
-    // Does that persist? `AsyncNotifier` state persists as long as the provider is alive.
-    // So let's try reading `authControllerProvider` value.
-
+    // Initial auth state for IDs
     final authState = ref.watch(authControllerProvider);
-    final user = authState.value;
+    final initialUser = authState.value;
 
-    if (user == null) {
-      // Fallback for reload/deep-link where state might be lost
+    if (initialUser == null || initialUser.parentId == null) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -55,27 +41,66 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
       );
     }
 
-    return Scaffold(
-      body: _selectedIndex == 0
-          ? _buildMissionsTab(user.name, user.currentPoints ?? 0)
-          : _buildRewardsTab(user.currentPoints ?? 0, user.parentId!, user.id),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
-            label: 'Missions',
+    // Connect to real-time stream
+    final childAsync = ref.watch(childStreamProvider(
+        (parentId: initialUser.parentId!, childId: initialUser.id)));
+
+    return childAsync.when(
+      data: (user) {
+        return Scaffold(
+          body: _buildBody(
+              user.name, user.currentPoints ?? 0, user.parentId!, user.id),
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
+              ],
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (index) => setState(() => _selectedIndex = index),
+              selectedItemColor: Colors.orange,
+              unselectedItemColor: Colors.grey,
+              selectedLabelStyle:
+                  GoogleFonts.kanit(fontWeight: FontWeight.bold),
+              unselectedLabelStyle: GoogleFonts.kanit(),
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.list_alt),
+                  label: 'Missions',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.star),
+                  label: 'Rewards',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history),
+                  label: 'History',
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star),
-            label: 'Rewards',
-          ),
-        ],
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(
+        body: Center(child: Text('Error loading profile: $e')),
       ),
     );
+  }
+
+  Widget _buildBody(String name, int points, String parentId, String childId) {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildMissionsTab(name, points);
+      case 1:
+        return _buildRewardsTab(points, parentId, childId);
+      case 2:
+        return _buildHistoryTab(parentId, childId);
+      default:
+        return const SizedBox();
+    }
   }
 
   Widget _buildMissionsTab(String name, int points) {
@@ -110,29 +135,41 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.orange.withOpacity(0.2),
-                              blurRadius: 8)
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.stars, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$points KP',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 18),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  blurRadius: 8)
+                            ],
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.stars, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$points KP',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {
+                            ref.read(authControllerProvider.notifier).signOut();
+                          },
+                          icon: const Icon(Icons.logout, color: Colors.red),
+                          tooltip: 'Logout',
+                        ),
+                      ],
                     )
                   ],
                 ),
@@ -230,11 +267,11 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(task.title,
-                      style: const TextStyle(
+                      style: GoogleFonts.kanit(
                           fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(task.description,
-                      style: TextStyle(color: Colors.grey.shade600)),
+                      style: GoogleFonts.kanit(color: Colors.grey.shade600)),
                   if (task.startTime != null) ...[
                     const SizedBox(height: 4),
                     Container(
@@ -246,7 +283,7 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                       ),
                       child: Text(
                         _formatTaskTime(task),
-                        style: TextStyle(
+                        style: GoogleFonts.kanit(
                             fontSize: 12,
                             color: Colors.grey.shade800,
                             fontWeight: FontWeight.bold),
@@ -268,7 +305,7 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                   ),
                   child: Text(
                     '+${task.points} KP',
-                    style: TextStyle(
+                    style: GoogleFonts.kanit(
                         color: Colors.orange.shade800,
                         fontWeight: FontWeight.bold),
                   ),
@@ -286,6 +323,7 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                                   parentId: authState.parentId!,
                                   childId: authState.id,
                                   taskId: task.id,
+                                  points: task.points,
                                 );
                           }
                         }
@@ -304,9 +342,9 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                     task.status == TaskStatus.approved
                         ? 'Completed'
                         : (task.status == TaskStatus.completed
-                            ? 'Waiting Approval'
+                            ? 'Check...'
                             : 'Done'),
-                    style: const TextStyle(fontSize: 12),
+                    style: GoogleFonts.kanit(fontSize: 12),
                   ),
                 )
               ],
@@ -496,6 +534,77 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
               }
             },
             child: const Text('Redeem'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryTab(String parentId, String childId) {
+    final tasksAsync =
+        ref.watch(tasksStreamProvider((parentId: parentId, childId: childId)));
+
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'Mission History',
+              style: GoogleFonts.kanit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey),
+            ),
+          ),
+          Expanded(
+            child: tasksAsync.when(
+              data: (tasks) {
+                // Show approved (history) tasks
+                final completedTasks = tasks
+                    .where((t) => t.status == TaskStatus.approved)
+                    .toList();
+
+                if (completedTasks.isEmpty) {
+                  return Center(
+                      child: Text('No completed missions yet.',
+                          style: GoogleFonts.kanit(color: Colors.grey)));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: completedTasks.length,
+                  itemBuilder: (context, index) {
+                    final task = completedTasks[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
+                      color: Colors.grey.shade50,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey.shade200)),
+                      child: ListTile(
+                        leading: const Icon(Icons.check_circle,
+                            color: Colors.green, size: 32),
+                        title: Text(
+                          task.title,
+                          style: GoogleFonts.kanit(
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey),
+                        ),
+                        subtitle: Text(
+                          '+${task.points} KP',
+                          style: GoogleFonts.kanit(
+                              color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Center(child: Text('Error: $e')),
+            ),
           ),
         ],
       ),

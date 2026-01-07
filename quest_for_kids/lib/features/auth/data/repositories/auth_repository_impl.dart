@@ -200,15 +200,55 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> deleteChildProfile(String parentId, String childId) async {
     try {
+      final childRef = _firestore
+          .collection('users')
+          .doc(parentId)
+          .collection('children')
+          .doc(childId);
+
+      // 1. Delete tasks subcollection manually (Client-side cascade)
+      final tasksSnapshot = await childRef.collection('tasks').get();
+      for (final doc in tasksSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // 2. Delete the child document
+      await childRef.delete();
+    } catch (e) {
+      throw AuthFailure('Failed to delete child profile: $e');
+    }
+  }
+
+  @override
+  Future<void> updateChildPoints(
+      String parentId, String childId, int newPoints) async {
+    try {
       await _firestore
           .collection('users')
           .doc(parentId)
           .collection('children')
           .doc(childId)
-          .delete();
+          .update({'currentPoints': newPoints});
     } catch (e) {
-      throw AuthFailure('Failed to delete child profile: $e');
+      throw AuthFailure('Failed to update points: $e');
     }
+  }
+
+  @override
+  Stream<UserEntity> streamChildProfile(String parentId, String childId) {
+    return _firestore
+        .collection('users')
+        .doc(parentId)
+        .collection('children')
+        .doc(childId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists) {
+        return UserModel.fromFirestore(doc);
+      } else {
+        throw AuthFailure('Child not found');
+      }
+    });
   }
 
   @override
