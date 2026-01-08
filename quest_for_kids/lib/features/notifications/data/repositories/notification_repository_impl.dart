@@ -75,4 +75,19 @@ class NotificationRepositoryImpl implements NotificationRepository {
     }
     await batch.commit();
   }
+
+  @override
+  Future<void> deleteAllNotifications(String parentId) async {
+    final batch = _firestore.batch();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(parentId)
+        .collection('notifications')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
 }

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaskModel {
 
- String get id; String get title; String get description; int get points;@JsonKey(name: 'is_recurring') bool get isRecurring; TaskStatus get status;@JsonKey(name: 'assigned_to_id') String get assignedToId;@JsonKey(name: 'start_time') DateTime? get startTime;@JsonKey(name: 'end_time') DateTime? get endTime;
+ String get id; String get title; String get description; int get points;@JsonKey(name: 'is_recurring') bool get isRecurring; TaskStatus get status;@JsonKey(name: 'assigned_to_id') String get assignedToId;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'start_time') DateTime? get startTime;@JsonKey(name: 'end_time') DateTime? get endTime;
 /// Create a copy of TaskModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,12 +28,12 @@ $TaskModelCopyWith<TaskModel> get copyWith => _$TaskModelCopyWithImpl<TaskModel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskModel&&super == other&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.points, points) || other.points == points)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedToId, assignedToId) || other.assignedToId == assignedToId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskModel&&super == other&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.points, points) || other.points == points)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedToId, assignedToId) || other.assignedToId == assignedToId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,super.hashCode,id,title,description,points,isRecurring,status,assignedToId,startTime,endTime);
+int get hashCode => Object.hash(runtimeType,super.hashCode,id,title,description,points,isRecurring,status,assignedToId,imageUrl,startTime,endTime);
 
 
 
@@ -44,7 +44,7 @@ abstract mixin class $TaskModelCopyWith<$Res>  {
   factory $TaskModelCopyWith(TaskModel value, $Res Function(TaskModel) _then) = _$TaskModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String description, int points,@JsonKey(name: 'is_recurring') bool isRecurring, TaskStatus status,@JsonKey(name: 'assigned_to_id') String assignedToId,@JsonKey(name: 'start_time') DateTime? startTime,@JsonKey(name: 'end_time') DateTime? endTime
+ String id, String title, String description, int points,@JsonKey(name: 'is_recurring') bool isRecurring, TaskStatus status,@JsonKey(name: 'assigned_to_id') String assignedToId,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'start_time') DateTime? startTime,@JsonKey(name: 'end_time') DateTime? endTime
 });
 
 
@@ -61,7 +61,7 @@ class _$TaskModelCopyWithImpl<$Res>
 
 /// Create a copy of TaskModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? points = null,Object? isRecurring = null,Object? status = null,Object? assignedToId = null,Object? startTime = freezed,Object? endTime = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? points = null,Object? isRecurring = null,Object? status = null,Object? assignedToId = null,Object? imageUrl = freezed,Object? startTime = freezed,Object? endTime = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -70,7 +70,8 @@ as String,points: null == points ? _self.points : points // ignore: cast_nullabl
 as int,isRecurring: null == isRecurring ? _self.isRecurring : isRecurring // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TaskStatus,assignedToId: null == assignedToId ? _self.assignedToId : assignedToId // ignore: cast_nullable_to_non_nullable
-as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
@@ -157,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaskModel() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.startTime,_that.endTime);case _:
+return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.imageUrl,_that.startTime,_that.endTime);case _:
   return orElse();
 
 }
@@ -178,10 +179,10 @@ return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecu
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)  $default,) {final _that = this;
 switch (_that) {
 case _TaskModel():
-return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.startTime,_that.endTime);case _:
+return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.imageUrl,_that.startTime,_that.endTime);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +199,10 @@ return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecu
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String description,  int points, @JsonKey(name: 'is_recurring')  bool isRecurring,  TaskStatus status, @JsonKey(name: 'assigned_to_id')  String assignedToId, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'start_time')  DateTime? startTime, @JsonKey(name: 'end_time')  DateTime? endTime)?  $default,) {final _that = this;
 switch (_that) {
 case _TaskModel() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.startTime,_that.endTime);case _:
+return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecurring,_that.status,_that.assignedToId,_that.imageUrl,_that.startTime,_that.endTime);case _:
   return null;
 
 }
@@ -213,7 +214,7 @@ return $default(_that.id,_that.title,_that.description,_that.points,_that.isRecu
 @JsonSerializable()
 
 class _TaskModel extends TaskModel {
-  const _TaskModel({required this.id, required this.title, required this.description, required this.points, @JsonKey(name: 'is_recurring') required this.isRecurring, required this.status, @JsonKey(name: 'assigned_to_id') required this.assignedToId, @JsonKey(name: 'start_time') this.startTime, @JsonKey(name: 'end_time') this.endTime}): super._();
+  const _TaskModel({required this.id, required this.title, required this.description, required this.points, @JsonKey(name: 'is_recurring') required this.isRecurring, required this.status, @JsonKey(name: 'assigned_to_id') required this.assignedToId, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'start_time') this.startTime, @JsonKey(name: 'end_time') this.endTime}): super._();
   factory _TaskModel.fromJson(Map<String, dynamic> json) => _$TaskModelFromJson(json);
 
 @override final  String id;
@@ -223,6 +224,7 @@ class _TaskModel extends TaskModel {
 @override@JsonKey(name: 'is_recurring') final  bool isRecurring;
 @override final  TaskStatus status;
 @override@JsonKey(name: 'assigned_to_id') final  String assignedToId;
+@override@JsonKey(name: 'image_url') final  String? imageUrl;
 @override@JsonKey(name: 'start_time') final  DateTime? startTime;
 @override@JsonKey(name: 'end_time') final  DateTime? endTime;
 
@@ -239,12 +241,12 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskModel&&super == other&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.points, points) || other.points == points)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedToId, assignedToId) || other.assignedToId == assignedToId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskModel&&super == other&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.points, points) || other.points == points)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedToId, assignedToId) || other.assignedToId == assignedToId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,super.hashCode,id,title,description,points,isRecurring,status,assignedToId,startTime,endTime);
+int get hashCode => Object.hash(runtimeType,super.hashCode,id,title,description,points,isRecurring,status,assignedToId,imageUrl,startTime,endTime);
 
 
 
@@ -255,7 +257,7 @@ abstract mixin class _$TaskModelCopyWith<$Res> implements $TaskModelCopyWith<$Re
   factory _$TaskModelCopyWith(_TaskModel value, $Res Function(_TaskModel) _then) = __$TaskModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String description, int points,@JsonKey(name: 'is_recurring') bool isRecurring, TaskStatus status,@JsonKey(name: 'assigned_to_id') String assignedToId,@JsonKey(name: 'start_time') DateTime? startTime,@JsonKey(name: 'end_time') DateTime? endTime
+ String id, String title, String description, int points,@JsonKey(name: 'is_recurring') bool isRecurring, TaskStatus status,@JsonKey(name: 'assigned_to_id') String assignedToId,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'start_time') DateTime? startTime,@JsonKey(name: 'end_time') DateTime? endTime
 });
 
 
@@ -272,7 +274,7 @@ class __$TaskModelCopyWithImpl<$Res>
 
 /// Create a copy of TaskModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? points = null,Object? isRecurring = null,Object? status = null,Object? assignedToId = null,Object? startTime = freezed,Object? endTime = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? points = null,Object? isRecurring = null,Object? status = null,Object? assignedToId = null,Object? imageUrl = freezed,Object? startTime = freezed,Object? endTime = freezed,}) {
   return _then(_TaskModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -281,7 +283,8 @@ as String,points: null == points ? _self.points : points // ignore: cast_nullabl
 as int,isRecurring: null == isRecurring ? _self.isRecurring : isRecurring // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TaskStatus,assignedToId: null == assignedToId ? _self.assignedToId : assignedToId // ignore: cast_nullable_to_non_nullable
-as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));

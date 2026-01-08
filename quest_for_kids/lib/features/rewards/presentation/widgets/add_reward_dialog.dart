@@ -23,6 +23,7 @@ class AddRewardDialog extends StatefulWidget {
 class _AddRewardDialogState extends State<AddRewardDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _imageUrlController;
   late int _cost;
   bool _isLoading = false;
 
@@ -30,12 +31,16 @@ class _AddRewardDialogState extends State<AddRewardDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
+    _imageUrlController = TextEditingController(
+      text: widget.initialImageUrl ?? '',
+    );
     _cost = widget.initialCost ?? 50;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -46,14 +51,16 @@ class _AddRewardDialogState extends State<AddRewardDialog> {
         await widget.onSave(
           _nameController.text.trim(),
           _cost,
-          null, // Image URL not implemented yet
+          _imageUrlController.text.trim().isEmpty
+              ? null
+              : _imageUrlController.text.trim(),
         );
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -77,6 +84,30 @@ class _AddRewardDialogState extends State<AddRewardDialog> {
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Name is required' : null,
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _imageUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Image URL (Optional)',
+                  hintText: 'https://example.com/reward.png',
+                  prefixIcon: Icon(Icons.link),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              if (_imageUrlController.text.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: SizedBox(
+                    height: 100,
+                    width: double.infinity,
+                    child: Image.network(
+                      _imageUrlController.text,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(child: Text('Invalid Image URL')),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -107,7 +138,10 @@ class _AddRewardDialogState extends State<AddRewardDialog> {
           onPressed: _isLoading ? null : _submit,
           child: _isLoading
               ? const SizedBox(
-                  width: 20, height: 20, child: CircularProgressIndicator())
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(),
+                )
               : Text(widget.isEditing ? 'Save Changes' : 'Add Reward'),
         ),
       ],

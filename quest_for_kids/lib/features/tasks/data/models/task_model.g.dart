@@ -14,6 +14,7 @@ _TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => _TaskModel(
   isRecurring: json['is_recurring'] as bool,
   status: $enumDecode(_$TaskStatusEnumMap, json['status']),
   assignedToId: json['assigned_to_id'] as String,
+  imageUrl: json['image_url'] as String?,
   startTime: json['start_time'] == null
       ? null
       : DateTime.parse(json['start_time'] as String),
@@ -31,6 +32,7 @@ Map<String, dynamic> _$TaskModelToJson(_TaskModel instance) =>
       'is_recurring': instance.isRecurring,
       'status': _$TaskStatusEnumMap[instance.status]!,
       'assigned_to_id': instance.assignedToId,
+      'image_url': instance.imageUrl,
       'start_time': instance.startTime?.toIso8601String(),
       'end_time': instance.endTime?.toIso8601String(),
     };

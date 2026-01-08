@@ -19,13 +19,12 @@ class ManageTasksScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync =
-        ref.watch(tasksStreamProvider((parentId: parentId, childId: childId)));
+    final tasksAsync = ref.watch(
+      tasksStreamProvider((parentId: parentId, childId: childId)),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Missions for $childName'),
-      ),
+      appBar: AppBar(title: Text('Missions for $childName')),
       body: tasksAsync.when(
         data: (tasks) {
           if (tasks.isEmpty) {
@@ -33,63 +32,142 @@ class ManageTasksScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.assignment_outlined,
-                      size: 64, color: Colors.grey.shade300),
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 64,
+                    color: Colors.grey.shade300,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No active missions.',
                     style: GoogleFonts.kanit(
-                        fontSize: 18, color: Colors.grey.shade600),
+                      fontSize: 18,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                   const Text('Assign a mission to start the adventure!'),
                 ],
               ),
             );
           }
-          return ListView.builder(
+          return GridView.builder(
             padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
             itemCount: tasks.length,
             itemBuilder: (context, index) {
               final task = tasks[index];
               return Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 12),
+                elevation: 4,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade50,
-                    child: Icon(
-                      task.isRecurring ? Icons.repeat : Icons.task_alt,
-                      color: Colors.blue,
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        color: Colors.blue.shade50,
+                        child:
+                            task.imageUrl != null && task.imageUrl!.isNotEmpty
+                            ? Image.network(
+                                task.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Center(
+                                      child: Icon(
+                                        task.isRecurring
+                                            ? Icons.repeat
+                                            : Icons.task_alt,
+                                        size: 48,
+                                        color: Colors.blue,
+                                      ),
+                                    ),
+                              )
+                            : Center(
+                                child: Icon(
+                                  task.isRecurring
+                                      ? Icons.repeat
+                                      : Icons.task_alt,
+                                  size: 48,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                      ),
                     ),
-                  ),
-                  title: Text(task.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: _buildSubtitle(task),
-                  isThreeLine: true,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (task.status == TaskStatus.completed)
-                        IconButton(
-                          icon: const Icon(Icons.check_circle,
-                              color: Colors.green),
-                          onPressed: () => _approveTask(context, ref, task),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${task.points} KP',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (task.status == TaskStatus.completed)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                    onPressed: () =>
+                                        _approveTask(context, ref, task),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () =>
+                                      _showEditTaskDialog(context, ref, task),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDelete(context, ref, task),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () =>
-                            _showEditTaskDialog(context, ref, task),
                       ),
-                      IconButton(
-                        icon:
-                            const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () => _confirmDelete(context, ref, task),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -106,7 +184,10 @@ class ManageTasksScreen extends ConsumerWidget {
   }
 
   void _showEditTaskDialog(
-      BuildContext context, WidgetRef ref, TaskEntity task) {
+    BuildContext context,
+    WidgetRef ref,
+    TaskEntity task,
+  ) {
     showDialog(
       context: context,
       builder: (_) => AddTaskDialog(
@@ -117,21 +198,33 @@ class ManageTasksScreen extends ConsumerWidget {
         initialIsRecurring: task.isRecurring,
         initialStartTime: task.startTime,
         initialEndTime: task.endTime,
-        onSave: (title, description, points, isRecurring, startTime,
-            endTime) async {
-          await ref.read(taskControllerProvider.notifier).updateTask(
-                taskId: task.id,
-                title: title,
-                description: description,
-                points: points,
-                isRecurring: isRecurring,
-                parentId: parentId,
-                childId: childId,
-                status: task.status,
-                startTime: startTime,
-                endTime: endTime,
-              );
-        },
+        initialImageUrl: task.imageUrl,
+        onSave:
+            (
+              title,
+              description,
+              points,
+              isRecurring,
+              startTime,
+              endTime,
+              imageUrl,
+            ) async {
+              await ref
+                  .read(taskControllerProvider.notifier)
+                  .updateTask(
+                    taskId: task.id,
+                    title: title,
+                    description: description,
+                    points: points,
+                    isRecurring: isRecurring,
+                    parentId: parentId,
+                    childId: childId,
+                    status: task.status,
+                    startTime: startTime,
+                    endTime: endTime,
+                    imageUrl: imageUrl,
+                  );
+            },
       ),
     );
   }
@@ -140,19 +233,30 @@ class ManageTasksScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => AddTaskDialog(
-        onSave: (title, description, points, isRecurring, startTime,
-            endTime) async {
-          await ref.read(taskControllerProvider.notifier).createTask(
-                title: title,
-                description: description,
-                points: points,
-                isRecurring: isRecurring,
-                parentId: parentId,
-                childId: childId,
-                startTime: startTime,
-                endTime: endTime,
-              );
-        },
+        onSave:
+            (
+              title,
+              description,
+              points,
+              isRecurring,
+              startTime,
+              endTime,
+              imageUrl,
+            ) async {
+              await ref
+                  .read(taskControllerProvider.notifier)
+                  .createTask(
+                    title: title,
+                    description: description,
+                    points: points,
+                    isRecurring: isRecurring,
+                    parentId: parentId,
+                    childId: childId,
+                    startTime: startTime,
+                    endTime: endTime,
+                    imageUrl: imageUrl,
+                  );
+            },
       ),
     );
   }
@@ -171,7 +275,9 @@ class ManageTasksScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await ref.read(taskControllerProvider.notifier).approveTask(
+              await ref
+                  .read(taskControllerProvider.notifier)
+                  .approveTask(
                     parentId: parentId,
                     childId: childId,
                     taskId: task.id,
@@ -199,36 +305,14 @@ class ManageTasksScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ref.read(taskControllerProvider.notifier).deleteTask(
-                    parentId,
-                    childId,
-                    task.id,
-                  );
+              ref
+                  .read(taskControllerProvider.notifier)
+                  .deleteTask(parentId, childId, task.id);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildSubtitle(TaskEntity task) {
-    String text = '${task.description}\n${task.points} KP';
-    if (task.startTime != null) {
-      String timeStr = _formatDate(task.startTime!);
-      if (task.endTime != null) {
-        timeStr += ' - ${_formatTime(task.endTime!)}';
-      }
-      text += '\n$timeStr';
-    }
-    return Text(text);
-  }
-
-  String _formatDate(DateTime dt) {
-    return '${dt.day}/${dt.month} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _formatTime(DateTime dt) {
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }

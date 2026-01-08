@@ -18,14 +18,15 @@ abstract class TaskModel with _$TaskModel implements TaskEntity {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        points,
-        isRecurring,
-        status,
-        assignedToId,
-      ];
+    id,
+    title,
+    description,
+    points,
+    isRecurring,
+    status,
+    assignedToId,
+    imageUrl,
+  ];
 
   @override
   bool? get stringify => true;
@@ -38,6 +39,7 @@ abstract class TaskModel with _$TaskModel implements TaskEntity {
     @JsonKey(name: 'is_recurring') required bool isRecurring,
     required TaskStatus status,
     @JsonKey(name: 'assigned_to_id') required String assignedToId,
+    @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'start_time') DateTime? startTime,
     @JsonKey(name: 'end_time') DateTime? endTime,
   }) = _TaskModel;
@@ -58,6 +60,7 @@ abstract class TaskModel with _$TaskModel implements TaskEntity {
     return TaskModel.fromJson({
       'id': doc.id,
       ...data,
+      'image_url': data['image_url'] ?? data['imageUrl'],
       'start_time': parseDate(data['start_time']),
       'end_time': parseDate(data['end_time']),
     });

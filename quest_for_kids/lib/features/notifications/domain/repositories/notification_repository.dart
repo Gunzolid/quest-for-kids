@@ -15,4 +15,7 @@ abstract class NotificationRepository {
 
   /// Mark all notifications as read
   Future<void> markAllAsRead(String parentId);
+
+  /// Delete all notifications for a parent
+  Future<void> deleteAllNotifications(String parentId);
 }

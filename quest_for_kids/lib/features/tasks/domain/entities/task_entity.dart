@@ -10,6 +10,7 @@ class TaskEntity extends Equatable {
   final bool isRecurring;
   final TaskStatus status;
   final String assignedToId;
+  final String? imageUrl;
   final DateTime? startTime;
   final DateTime? endTime;
 
@@ -21,20 +22,22 @@ class TaskEntity extends Equatable {
     required this.isRecurring,
     required this.status,
     required this.assignedToId,
+    this.imageUrl,
     this.startTime,
     this.endTime,
   });
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        points,
-        isRecurring,
-        status,
-        assignedToId,
-        startTime,
-        endTime,
-      ];
+    id,
+    title,
+    description,
+    points,
+    isRecurring,
+    status,
+    assignedToId,
+    imageUrl,
+    startTime,
+    endTime,
+  ];
 }

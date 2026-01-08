@@ -11,7 +11,10 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<void> createTask(
-      TaskEntity task, String parentId, String childId) async {
+    TaskEntity task,
+    String parentId,
+    String childId,
+  ) async {
     try {
       final docRef = _firestore
           .collection('users')
@@ -31,6 +34,7 @@ class TaskRepositoryImpl implements TaskRepository {
         assignedToId: childId,
         startTime: task.startTime,
         endTime: task.endTime,
+        imageUrl: task.imageUrl,
       );
 
       await docRef.set(taskModel.toJson()..remove('id'));
@@ -50,13 +54,18 @@ class TaskRepositoryImpl implements TaskRepository {
         .orderBy('status') // Show pending first? Or created date?
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
-    });
+          return snapshot.docs
+              .map((doc) => TaskModel.fromFirestore(doc))
+              .toList();
+        });
   }
 
   @override
   Future<void> updateTask(
-      TaskEntity task, String parentId, String childId) async {
+    TaskEntity task,
+    String parentId,
+    String childId,
+  ) async {
     try {
       final docRef = _firestore
           .collection('users')
@@ -76,6 +85,7 @@ class TaskRepositoryImpl implements TaskRepository {
         assignedToId: childId,
         startTime: task.startTime,
         endTime: task.endTime,
+        imageUrl: task.imageUrl,
       );
 
       await docRef.update(taskModel.toJson()..remove('id'));
@@ -86,7 +96,11 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<void> updateTaskStatus(
-      String parentId, String childId, String taskId, TaskStatus status) async {
+    String parentId,
+    String childId,
+    String taskId,
+    TaskStatus status,
+  ) async {
     try {
       await _firestore
           .collection('users')
@@ -106,7 +120,11 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<void> approveTask(
-      String parentId, String childId, String taskId, int points) async {
+    String parentId,
+    String childId,
+    String taskId,
+    int points,
+  ) async {
     try {
       await _firestore.runTransaction((transaction) async {
         final taskRef = _firestore
@@ -130,8 +148,9 @@ class TaskRepositoryImpl implements TaskRepository {
         // We need to read the child doc first to increment, or use FieldValue.increment
         // Transaction requires read before write if we depend on value, but FieldValue.increment is simpler.
         // However, standard Firestore transaction practice: if simply incrementing, just update.
-        transaction
-            .update(childRef, {'currentPoints': FieldValue.increment(points)});
+        transaction.update(childRef, {
+          'currentPoints': FieldValue.increment(points),
+        });
       });
     } catch (e) {
       throw AuthFailure('Failed to approve task: $e');
@@ -140,7 +159,10 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<void> deleteTask(
-      String parentId, String childId, String taskId) async {
+    String parentId,
+    String childId,
+    String taskId,
+  ) async {
     try {
       await _firestore
           .collection('users')
@@ -152,6 +174,31 @@ class TaskRepositoryImpl implements TaskRepository {
           .delete();
     } catch (e) {
       throw AuthFailure('Failed to delete task: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteCompletedTasks(String parentId, String childId) async {
+    try {
+      final tasksRef = _firestore
+          .collection('users')
+          .doc(parentId)
+          .collection('children')
+          .doc(childId)
+          .collection('tasks');
+
+      // Batch delete tasks with status 'approved' (which we treat as completed history)
+      final snapshot = await tasksRef
+          .where('status', isEqualTo: TaskStatus.approved.name)
+          .get();
+
+      final batch = _firestore.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      throw AuthFailure('Failed to delete completed tasks: $e');
     }
   }
 }

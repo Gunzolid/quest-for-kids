@@ -321,11 +321,39 @@ class ParentDashboardScreen extends ConsumerWidget {
               const Text('Notifications'),
               TextButton(
                 onPressed: () {
-                  ref
-                      .read(notificationRepositoryProvider)
-                      .markAllAsRead(parentId);
+                  // Confirm clear all?
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Clear All Notifications?'),
+                      content: const Text(
+                        'This will permanently delete all notifications.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await ref
+                                .read(notificationRepositoryProvider)
+                                .deleteAllNotifications(parentId);
+                          },
+                          child: const Text(
+                            'Clear All',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 },
-                child: const Text('Mark all read'),
+                child: const Text(
+                  'Clear All',
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
             ],
           ),
