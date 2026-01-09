@@ -232,44 +232,73 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                   )),
                 );
 
-                return tasksAsync.when(
-                  data: (tasks) {
-                    if (tasks.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No missions for today!',
-                          style: GoogleFonts.kanit(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      );
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    if (tasksAsync.value != null) {
+                      await ref
+                          .read(taskControllerProvider.notifier)
+                          .checkOverdueTasks(
+                            tasksAsync.value!,
+                            user.parentId!,
+                            user.id,
+                          );
                     }
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.7, // Adjusted for vertical card
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                      itemCount: tasks.length,
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        final color = [
-                          Colors.blue,
-                          Colors.purple,
-                          Colors.green,
-                          Colors.orange,
-                        ][index % 4];
-                        return _buildMissionCard(task, color, name);
-                      },
-                    );
                   },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(child: Text('Error: $e')),
+                  child: tasksAsync.when(
+                    data: (tasks) {
+                      if (tasks.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No missions for today!',
+                            style: GoogleFonts.kanit(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      }
+                      if (tasks.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          ref
+                              .read(taskControllerProvider.notifier)
+                              .checkOverdueTasks(
+                                tasks,
+                                user.parentId!,
+                                user.id,
+                              );
+                        });
+                      }
+                      return GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio:
+                                  0.7, // Adjusted for vertical card
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                        itemCount: tasks.length,
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+                          final isLate = task.status == TaskStatus.late;
+                          final color = isLate
+                              ? Colors.red
+                              : [
+                                  Colors.blue,
+                                  Colors.purple,
+                                  Colors.green,
+                                  Colors.orange,
+                                ][index % 4];
+                          return _buildMissionCard(task, color, name);
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, st) => Center(child: Text('Error: $e')),
+                  ),
                 );
               },
             ),
@@ -330,6 +359,30 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                       color: Colors.grey.shade600,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  if (task.startTime != null || task.endTime != null)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatTimeRange(
+                            context,
+                            task.startTime,
+                            task.endTime,
+                          ),
+                          style: GoogleFonts.kanit(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   const Spacer(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -353,6 +406,28 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                           ),
                         ),
                       ),
+                      if (task.status == TaskStatus.pending &&
+                          task.endTime != null)
+                        IconButton(
+                          icon: Icon(
+                            task.reminderMinutes != null
+                                ? Icons.alarm_on
+                                : Icons.alarm_add,
+                            color: task.reminderMinutes != null
+                                ? Colors.blue
+                                : Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () => _showReminderDialog(
+                            context,
+                            ref,
+                            task,
+                            childName,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Set Reminder',
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -384,7 +459,9 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                             ? color
                             : (task.status == TaskStatus.approved
                                   ? Colors.green
-                                  : Colors.grey),
+                                  : (task.status == TaskStatus.late
+                                        ? Colors.red
+                                        : Colors.grey)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -395,7 +472,9 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
                             ? 'Completed'
                             : (task.status == TaskStatus.completed
                                   ? 'Check...'
-                                  : 'Done'),
+                                  : (task.status == TaskStatus.late
+                                        ? 'Late'
+                                        : 'Done')),
                         style: GoogleFonts.kanit(fontSize: 14),
                       ),
                     ),
@@ -773,5 +852,118 @@ class _ChildDashboardScreenState extends ConsumerState<ChildDashboardScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTimeRange(
+    BuildContext context,
+    DateTime? start,
+    DateTime? end,
+  ) {
+    String formatTime(DateTime dt) {
+      return TimeOfDay.fromDateTime(dt).format(context);
+    }
+
+    if (start != null && end != null) {
+      return '${formatTime(start)} - ${formatTime(end)}';
+    } else if (start != null) {
+      return 'Start: ${formatTime(start)}';
+    } else if (end != null) {
+      return 'Due: ${formatTime(end)}';
+    }
+    return '';
+  }
+
+  void _showReminderDialog(
+    BuildContext context,
+    WidgetRef ref,
+    TaskEntity task,
+    String childName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Set Reminder'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('None'),
+                leading: Radio<int?>(
+                  value: null,
+                  groupValue: task.reminderMinutes,
+                  onChanged: (val) async {
+                    Navigator.pop(context);
+                    await _updateReminder(ref, task, val);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('15 Minutes Before'),
+                leading: Radio<int?>(
+                  value: 15,
+                  groupValue: task.reminderMinutes,
+                  onChanged: (val) async {
+                    Navigator.pop(context);
+                    await _updateReminder(ref, task, val);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('30 Minutes Before'),
+                leading: Radio<int?>(
+                  value: 30,
+                  groupValue: task.reminderMinutes,
+                  onChanged: (val) async {
+                    Navigator.pop(context);
+                    await _updateReminder(ref, task, val);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('1 Hour Before'),
+                leading: Radio<int?>(
+                  value: 60,
+                  groupValue: task.reminderMinutes,
+                  onChanged: (val) async {
+                    Navigator.pop(context);
+                    await _updateReminder(ref, task, val);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateReminder(
+    WidgetRef ref,
+    TaskEntity task,
+    int? minutes,
+  ) async {
+    final user = ref.read(authControllerProvider).value;
+    if (user != null && user.parentId != null) {
+      await ref
+          .read(taskControllerProvider.notifier)
+          .setTaskReminder(
+            parentId: user.parentId!,
+            childId: user.id,
+            taskId: task.id,
+            reminderMinutes: minutes,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              minutes == null
+                  ? 'Reminder removed'
+                  : 'Reminder set for $minutes mins before due',
+            ),
+          ),
+        );
+      }
+    }
   }
 }

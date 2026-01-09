@@ -82,21 +82,29 @@ class ManageTasksScreen extends ConsumerWidget {
                                 errorBuilder: (context, error, stackTrace) =>
                                     Center(
                                       child: Icon(
-                                        task.isRecurring
-                                            ? Icons.repeat
-                                            : Icons.task_alt,
+                                        task.status == TaskStatus.late
+                                            ? Icons.warning_amber_rounded
+                                            : (task.isRecurring
+                                                  ? Icons.repeat
+                                                  : Icons.task_alt),
                                         size: 48,
-                                        color: Colors.blue,
+                                        color: task.status == TaskStatus.late
+                                            ? Colors.red
+                                            : Colors.blue,
                                       ),
                                     ),
                               )
                             : Center(
                                 child: Icon(
-                                  task.isRecurring
-                                      ? Icons.repeat
-                                      : Icons.task_alt,
+                                  task.status == TaskStatus.late
+                                      ? Icons.warning_amber_rounded
+                                      : (task.isRecurring
+                                            ? Icons.repeat
+                                            : Icons.task_alt),
                                   size: 48,
-                                  color: Colors.blue,
+                                  color: task.status == TaskStatus.late
+                                      ? Colors.red
+                                      : Colors.blue,
                                 ),
                               ),
                       ),
@@ -139,6 +147,17 @@ class ManageTasksScreen extends ConsumerWidget {
                                         _approveTask(context, ref, task),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
+                                  ),
+                                if (task.status == TaskStatus.late)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Text(
+                                      'LATE',
+                                      style: GoogleFonts.kanit(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 IconButton(
                                   icon: const Icon(
@@ -199,6 +218,7 @@ class ManageTasksScreen extends ConsumerWidget {
         initialStartTime: task.startTime,
         initialEndTime: task.endTime,
         initialImageUrl: task.imageUrl,
+        initialReminderMinutes: task.reminderMinutes,
         onSave:
             (
               title,
@@ -208,6 +228,7 @@ class ManageTasksScreen extends ConsumerWidget {
               startTime,
               endTime,
               imageUrl,
+              reminderMinutes,
             ) async {
               await ref
                   .read(taskControllerProvider.notifier)
@@ -223,6 +244,7 @@ class ManageTasksScreen extends ConsumerWidget {
                     startTime: startTime,
                     endTime: endTime,
                     imageUrl: imageUrl,
+                    reminderMinutes: reminderMinutes,
                   );
             },
       ),
@@ -242,6 +264,7 @@ class ManageTasksScreen extends ConsumerWidget {
               startTime,
               endTime,
               imageUrl,
+              reminderMinutes,
             ) async {
               await ref
                   .read(taskControllerProvider.notifier)
@@ -255,6 +278,7 @@ class ManageTasksScreen extends ConsumerWidget {
                     startTime: startTime,
                     endTime: endTime,
                     imageUrl: imageUrl,
+                    reminderMinutes: reminderMinutes,
                   );
             },
       ),

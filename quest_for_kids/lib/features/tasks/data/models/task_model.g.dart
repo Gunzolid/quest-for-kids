@@ -21,6 +21,7 @@ _TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => _TaskModel(
   endTime: json['end_time'] == null
       ? null
       : DateTime.parse(json['end_time'] as String),
+  reminderMinutes: (json['reminderMinutes'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$TaskModelToJson(_TaskModel instance) =>
@@ -35,10 +36,12 @@ Map<String, dynamic> _$TaskModelToJson(_TaskModel instance) =>
       'image_url': instance.imageUrl,
       'start_time': instance.startTime?.toIso8601String(),
       'end_time': instance.endTime?.toIso8601String(),
+      'reminderMinutes': instance.reminderMinutes,
     };
 
 const _$TaskStatusEnumMap = {
   TaskStatus.pending: 'pending',
   TaskStatus.completed: 'completed',
   TaskStatus.approved: 'approved',
+  TaskStatus.late: 'late',
 };

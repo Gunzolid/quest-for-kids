@@ -30,6 +30,7 @@ class TaskController extends AsyncNotifier<void> {
     DateTime? startTime,
     DateTime? endTime,
     String? imageUrl,
+    int? reminderMinutes,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -44,21 +45,38 @@ class TaskController extends AsyncNotifier<void> {
         startTime: startTime,
         endTime: endTime,
         imageUrl: imageUrl,
+        reminderMinutes: reminderMinutes,
       );
       await ref
           .read(taskRepositoryProvider)
           .createTask(task, parentId, childId);
 
-      // Schedule Notification
+      final notifService = ref.read(notificationServiceProvider);
+
+      // Schedule Start Notification
       if (startTime != null) {
-        await ref
-            .read(notificationServiceProvider)
-            .scheduleNotification(
-              id: task.id.hashCode,
-              title: 'Mission Start: $title',
-              body: 'It\'s time to start your mission!',
-              scheduledDate: startTime,
-            );
+        await notifService.scheduleNotification(
+          id: task.id.hashCode,
+          title: 'Mission Start: $title',
+          body: 'It\'s time to start your mission!',
+          scheduledDate: startTime,
+        );
+      }
+
+      // Schedule Due Soon Notification
+      if (endTime != null && reminderMinutes != null) {
+        final reminderTime = endTime.subtract(
+          Duration(minutes: reminderMinutes),
+        );
+        if (reminderTime.isAfter(DateTime.now())) {
+          await notifService.scheduleNotification(
+            id: task.id.hashCode + 1,
+            title: 'Hurry up! $title is due soon!',
+            body:
+                'You have $reminderMinutes minutes left to complete this mission.',
+            scheduledDate: reminderTime,
+          );
+        }
       }
     });
   }
@@ -75,6 +93,7 @@ class TaskController extends AsyncNotifier<void> {
     DateTime? startTime,
     DateTime? endTime,
     String? imageUrl,
+    int? reminderMinutes,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -89,6 +108,7 @@ class TaskController extends AsyncNotifier<void> {
         startTime: startTime,
         endTime: endTime,
         imageUrl: imageUrl,
+        reminderMinutes: reminderMinutes,
       );
       await ref
           .read(taskRepositoryProvider)
@@ -97,6 +117,8 @@ class TaskController extends AsyncNotifier<void> {
       // Reschedule Notification
       final notifService = ref.read(notificationServiceProvider);
       await notifService.cancelNotification(taskId.hashCode);
+
+      // Start Time Notification
       if (startTime != null) {
         await notifService.scheduleNotification(
           id: taskId.hashCode,
@@ -104,6 +126,24 @@ class TaskController extends AsyncNotifier<void> {
           body: 'Your mission has been updated!',
           scheduledDate: startTime,
         );
+      }
+
+      // Due Soon Notification
+      // Use different ID: taskId.hashCode + 1
+      await notifService.cancelNotification(taskId.hashCode + 1);
+      if (endTime != null && reminderMinutes != null) {
+        final reminderTime = endTime.subtract(
+          Duration(minutes: reminderMinutes),
+        );
+        if (reminderTime.isAfter(DateTime.now())) {
+          await notifService.scheduleNotification(
+            id: taskId.hashCode + 1,
+            title: 'Hurry up! $title is due soon!',
+            body:
+                'You have $reminderMinutes minutes left to complete this mission.',
+            scheduledDate: reminderTime,
+          );
+        }
       }
     });
   }
@@ -189,6 +229,113 @@ class TaskController extends AsyncNotifier<void> {
           .read(taskRepositoryProvider)
           .deleteCompletedTasks(parentId, childId);
     });
+  }
+
+  Future<void> markTaskAsLate({
+    required String parentId,
+    required String childId,
+    required String taskId,
+  }) async {
+    // state = const AsyncValue.loading(); // Avoid full loading state for background updates
+    state = await AsyncValue.guard(() async {
+      final task =
+          (await ref
+                  .read(taskRepositoryProvider)
+                  .getTasksForChild(parentId, childId)
+                  .first)
+              .firstWhere((t) => t.id == taskId);
+
+      final updatedTask = TaskEntity(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        points: task.points,
+        isRecurring: task.isRecurring,
+        status: TaskStatus.late,
+        assignedToId: task.assignedToId,
+        startTime: task.startTime,
+        endTime: task.endTime,
+        imageUrl: task.imageUrl,
+      );
+
+      await ref
+          .read(taskRepositoryProvider)
+          .updateTask(updatedTask, parentId, childId);
+    });
+  }
+
+  Future<void> setTaskReminder({
+    required String parentId,
+    required String childId,
+    required String taskId,
+    required int? reminderMinutes,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final task =
+          (await ref
+                  .read(taskRepositoryProvider)
+                  .getTasksForChild(parentId, childId)
+                  .first)
+              .firstWhere((t) => t.id == taskId);
+
+      final updatedTask = TaskEntity(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        points: task.points,
+        isRecurring: task.isRecurring,
+        status: task.status,
+        assignedToId: task.assignedToId,
+        startTime: task.startTime,
+        endTime: task.endTime,
+        imageUrl: task.imageUrl,
+        reminderMinutes: reminderMinutes,
+      );
+
+      await ref
+          .read(taskRepositoryProvider)
+          .updateTask(updatedTask, parentId, childId);
+
+      // Manage Notifications
+      final notifService = ref.read(notificationServiceProvider);
+      // Cancel existing Due Soon notification
+      await notifService.cancelNotification(taskId.hashCode + 1);
+
+      if (task.endTime != null && reminderMinutes != null) {
+        final reminderTime = task.endTime!.subtract(
+          Duration(minutes: reminderMinutes),
+        );
+        if (reminderTime.isAfter(DateTime.now())) {
+          await notifService.scheduleNotification(
+            id: taskId.hashCode + 1,
+            title: 'Hurry up! ${task.title} is due soon!',
+            body:
+                'You have $reminderMinutes minutes left to complete this mission.',
+            scheduledDate: reminderTime,
+          );
+        }
+      }
+    });
+  }
+
+  Future<void> checkOverdueTasks(
+    List<TaskEntity> tasks,
+    String parentId,
+    String childId,
+  ) async {
+    final now = DateTime.now();
+    for (final task in tasks) {
+      if (task.status == TaskStatus.pending &&
+          task.endTime != null &&
+          task.endTime!.isBefore(now)) {
+        await markTaskAsLate(
+          parentId: parentId,
+          childId: childId,
+          taskId: task.id,
+        );
+      }
+    }
   }
 }
 

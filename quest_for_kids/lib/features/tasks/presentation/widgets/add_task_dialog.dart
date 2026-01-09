@@ -9,6 +9,7 @@ class AddTaskDialog extends StatefulWidget {
     DateTime? startTime,
     DateTime? endTime,
     String? imageUrl,
+    int? reminderMinutes,
   )
   onSave;
 
@@ -19,6 +20,7 @@ class AddTaskDialog extends StatefulWidget {
   final DateTime? initialStartTime;
   final DateTime? initialEndTime;
   final String? initialImageUrl;
+  final int? initialReminderMinutes;
   final bool isEditing;
 
   const AddTaskDialog({
@@ -31,6 +33,7 @@ class AddTaskDialog extends StatefulWidget {
     this.initialStartTime,
     this.initialEndTime,
     this.initialImageUrl,
+    this.initialReminderMinutes,
     this.isEditing = false,
   });
 
@@ -49,6 +52,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   bool _isLoading = false;
   DateTime? _startTime;
   DateTime? _endTime;
+  int? _reminderMinutes;
 
   late TabController _tabController;
 
@@ -76,7 +80,9 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     _points = widget.initialPoints ?? 10;
     _isRecurring = widget.initialIsRecurring ?? false;
     _startTime = widget.initialStartTime;
+    _startTime = widget.initialStartTime;
     _endTime = widget.initialEndTime;
+    _reminderMinutes = widget.initialReminderMinutes;
 
     _tabController = TabController(length: 2, vsync: this);
     if (widget.isEditing) {
@@ -163,6 +169,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
           _imageUrlController.text.trim().isEmpty
               ? null
               : _imageUrlController.text.trim(),
+          _reminderMinutes,
         );
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
@@ -359,6 +366,29 @@ class _AddTaskDialogState extends State<AddTaskDialog>
               trailing: const Icon(Icons.event_busy),
               onTap: () => _pickDateTime(false),
             ),
+            if (_endTime != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.alarm, size: 20, color: Colors.grey),
+                    const SizedBox(width: 16),
+                    const Text('Remind me before: '),
+                    const Spacer(),
+                    DropdownButton<int?>(
+                      value: _reminderMinutes,
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('None')),
+                        DropdownMenuItem(value: 15, child: Text('15 mins')),
+                        DropdownMenuItem(value: 30, child: Text('30 mins')),
+                        DropdownMenuItem(value: 60, child: Text('1 hour')),
+                      ],
+                      onChanged: (v) => setState(() => _reminderMinutes = v),
+                      underline: Container(),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

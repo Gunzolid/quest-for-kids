@@ -42,6 +42,7 @@ abstract class TaskModel with _$TaskModel implements TaskEntity {
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'start_time') DateTime? startTime,
     @JsonKey(name: 'end_time') DateTime? endTime,
+    int? reminderMinutes,
   }) = _TaskModel;
 
   factory TaskModel.fromJson(Map<String, dynamic> json) =>

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum TaskStatus { pending, completed, approved }
+enum TaskStatus { pending, completed, approved, late }
 
 class TaskEntity extends Equatable {
   final String id;
@@ -13,6 +13,7 @@ class TaskEntity extends Equatable {
   final String? imageUrl;
   final DateTime? startTime;
   final DateTime? endTime;
+  final int? reminderMinutes;
 
   const TaskEntity({
     required this.id,
@@ -25,6 +26,7 @@ class TaskEntity extends Equatable {
     this.imageUrl,
     this.startTime,
     this.endTime,
+    this.reminderMinutes,
   });
 
   @override
@@ -39,5 +41,6 @@ class TaskEntity extends Equatable {
     imageUrl,
     startTime,
     endTime,
+    reminderMinutes,
   ];
 }
