@@ -53,7 +53,7 @@
 
 2. **Clone & Install**:
    ```bash
-   git clone <repository_url>
+   git clone https://github.com/Gunzolid/quest-for-kids
    cd quest_for_kids
    flutter pub get
    ```
